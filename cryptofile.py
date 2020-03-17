@@ -60,16 +60,17 @@ class CryptoFile_GUI():
         oper_lbl = ttk.LabelFrame(self.window, text="Operation")
         oper_lbl.grid(row=4, sticky='WE', padx=5, pady=5)
 
-        encrypt = tk.Button(oper_lbl, text="Encrypt", command=lambda: prepareEncrypt()).\
+        encrypt = tk.Button(oper_lbl, text="Encrypt", command=lambda: startEncrypt()).\
             grid(row=2, column=0, padx=5, pady=5, ipadx=78)
-        decrypt = tk.Button(oper_lbl, text="Decrypt", command=lambda: prepareDecrypt()).\
+        decrypt = tk.Button(oper_lbl, text="Decrypt", command=lambda: startDecrypt()).\
             grid(row=2, column=1, padx=5, pady=5, ipadx=78)
 
         # --------------------------------------------------------
         log_lbl = ttk.LabelFrame(self.window, text="Log")
         log_lbl.grid(row=5, sticky='WE', padx=5, pady=5)
 
-        logger = tk.Text(log_lbl, height=5, width=30)
+        logger = tk.Text(log_lbl, height=5, width=40)
+        logger.config(font=("arial", 8))
         logger.grid(row=1, column=0, ipadx=115, ipady=12, padx=5, pady=5)
 
         # --------------------------------------------------------
@@ -77,9 +78,11 @@ class CryptoFile_GUI():
         foot_lbl.config(font=("arial", 8))
         foot_lbl.grid()
 
+
         def selectFiles():
             filename = askopenfilename()
-            appendToPathsList(filename)
+            if len(filename):
+                appendToPathsList(filename)
 
         def selectDirectory():
             dirname = askdirectory()
@@ -106,119 +109,81 @@ class CryptoFile_GUI():
             else:
                 return passtxt
 
-        def prepareEncrypt():
+        def prepareData():
             filespath = getAllSelectedFile()
             password = getPassword()
 
-            if filespath is not None and len(filespath)==0:
+            if filespath is not None and len(filespath) == 0:
                 log('No File(s) added')
             elif password is None:
                 log('Password field is empty')
             elif len(password) < 16:
                 log("Password is too short")
             else:
-                log('Start Encrypting ...')
-                startEncrypt(filespath, password)
+                return filespath, password
 
-        def startEncrypt(listOfFiles, password):
+            return [], ''
+
+        def startEncrypt():
+            listOfFiles, password = prepareData()
             for file in listOfFiles:
-                res_fl = encrypt_file(file, password)
-                if res_fl is not None:
-                    log(res_fl)
-            log('Done')
+                log("Decrypting : " + file)
+                encrypt_file(file, password)
+            log("Done")
 
-        def prepareDecrypt():
-            filespath = getAllSelectedFile()
-            password = getPassword()
-
-            if filespath is not None and len(filespath)==0:
-                log('No File(s) added')
-            elif password is None:
-                log('Password field is empty')
-            elif len(password) < 16:
-                log("Password is too short")
-            else:
-                log('Start Decrypting ...')
-                startDecrypt(filespath, password)
-
-        def startDecrypt(listOfFiles, password):
+        def startDecrypt():
+            listOfFiles, password = prepareData()
             for file in listOfFiles:
-                if '.enc' in file:
-                    res_lg = decrypt_file(file, password)
-                    if res_lg is not None:
-                        log(res_lg)
-                else:
+                if '.enc' not in file:
                     log('Unknown file format : {}'.format(file))
-            log('Done')
+                else:
+                    log("Decrypting : " + file)
+                    decrypt_file(file, password)
+            log("Done")
 
         def log(message):
             log_data = timestamp() + message + '\n'
             logger.insert('1.0', log_data)
-        log('Ready')
 
+        log('Ready')
 
 
 def encrypt(plaintext, key, iv_sz=16):
     iv = get_random_bytes(iv_sz)
     cipher = AES.new(key, AES.MODE_CFB, iv)
     try:
-        return iv + cipher.encrypt(plaintext)
-    except:
-        return "Unable to encrypt"
+        ciphertext=cipher.encrypt(plaintext)
+    except Exception as e:
+        return "Unable to Encrypt :", e
+    return iv + ciphertext
 
 
 def decrypt(ciphertext, key, iv_sz=16):
     iv = ciphertext[:iv_sz]
     cipher = AES.new(key, AES.MODE_CFB, iv)
-
     try:
         plaintext = cipher.decrypt(ciphertext[iv_sz:])
-    except:
-        return "Unable to decrypt"
-
-    return plaintext.decode('utf-8', 'ignore')
+    except Exception as e:
+        return "Unable to decrypt :", e
+    return plaintext
 
 
 def encrypt_file(file_name, key, del_plain=False):
-    # read the plaintext file content
+    plaintext = read_file(file_name, rmode='rb')
     try:
-        with open(file_name, 'rb') as file:
-            plaintext = file.read()
-            ciphertext = encrypt(plaintext, key)
-    except IOError:
-        return "Could not read file:", file_name
-
-    # create the new encrypted file
-    try:
-        with open(file_name + ".enc", 'wb') as nfile:
-            nfile.write(ciphertext)
-    except IOError:
-        return "Could not create: ", nfile
-
-    # delete the original plaintext file
-    if del_plain:
-        removeFile(file_name)
+        ciphertext = encrypt(plaintext, key)
+    except Exception as e:
+        return "Error :", e
+    create_file(file_name + ".enc", ciphertext, wmode='wb')
 
 
 def decrypt_file(file_name, key, del_cipher=False):
-    # read the encrypted file content
+    ciphertext = read_file(file_name, rmode='rb')
     try:
-        with open(file_name, 'rb') as file:
-            ciphertext = file.read()
         plaintext = decrypt(ciphertext, key)
-    except IOError:
-        return "Could not read file: ", file_name
-
-    # create the plaintext file content
-    try:
-        with open(file_name[:-4], 'w') as nfile:
-            nfile.write(plaintext)
-    except IOError:
-        return "Could not create: ", file_name
-
-    # delete the encrypted file
-    if del_cipher:
-        removeFile(file_name)
+    except Exception as e:
+        return "Error :", e
+    create_file(file_name[:-4], plaintext, wmode='wb')
 
 
 if __name__ == '__main__':

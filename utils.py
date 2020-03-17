@@ -27,3 +27,19 @@ def removeFile(file_name):
 
 def timestamp():
     return '{:%Y-%m-%d %H:%M:%S} | '.format(datetime.datetime.now())
+
+def create_file(filename, content, wmode='w'):
+    try:
+        with open(filename, wmode) as file:
+            file.write(content)
+    except Exception as e:
+        return "Error :", e
+    return True
+
+def read_file(filename, rmode='r'):
+    try:
+        with open(filename, rmode) as file:
+            content = file.read()
+    except Exception as e:
+        return "Error :", e
+    return content

@@ -8,3 +8,8 @@ A personal tool I made to encrypt\Decrypt multiple files at once using [Python C
 ### Screenshot
 ![CryptoFile GUI](data/Screenshot.png)
 
+### Todo
+- [ ] Delete original files
+- [ ] Compress the files
+
+
