@@ -127,7 +127,7 @@ class CryptoFile_GUI():
         def startEncrypt():
             listOfFiles, password = prepareData()
             for file in listOfFiles:
-                log("Decrypting : " + file)
+                log("Encrypting : " + file)
                 encrypt_file(file, password)
             log("Done")
 
